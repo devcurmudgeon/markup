@@ -1,4 +1,7 @@
 require "github/markup/markdown"
+require "github/markdown"
+require 'yaml'
+require 'redcarpet'
 
 markups << GitHub::Markup::Markdown.new
 
@@ -27,6 +30,26 @@ end
 
 markup(:asciidoctor, /adoc|asc(iidoc)?/) do |content|
   Asciidoctor.render(content, :safe => :secure, :attributes => %w(showtitle idprefix idseparator=- env=github env-github source-highlighter=html-pipeline))
+end
+
+md = Redcarpet::Markdown.new(Redcarpet::Render::HTML, extensions = {})
+
+markup(:yaml, /yaml|yml/) do |content|
+  out = "<div><table>"
+  YAML.load(content).each do |key, value|
+    out += "<tr><td><b>#{key}</b></td><td>"
+    case key
+    when "description"
+      out += md.render(value)
+    when "parent"
+      out += "[[" + "#{value}" + "]]"
+    else
+      out += "#{value}"
+    end
+    out += "</td></tr>"
+  end
+  out += "</table></div>"
+  out.to_html
 end
 
 command("python2 -S #{File.dirname(__FILE__)}/commands/rest2html", /re?st(\.txt)?/)
